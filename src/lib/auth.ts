@@ -1,41 +1,35 @@
-import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
+import { cookies } from "next/headers";
 
-const JWT_SECRET = process.env.JWT_SECRET || "eventsprint-super-secret-key-2026";
+const JWT_SECRET = process.env.JWT_SECRET || "default_fallback_secret_key";
 
-export interface SessionUser {
+export interface AuthPayload {
   userId: string;
   email: string;
-  name: string;
-  role: string;
-  teamId?: string | null;
+  role?: string;
 }
 
-export async function createToken(payload: SessionUser) {
+export function signToken(payload: AuthPayload): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
 }
 
-export async function setAuthSession(user: SessionUser) {
-  const token = await createToken(user);
-  const cookieStore = await cookies();
-  cookieStore.set("token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-  });
-  return token;
+// Alias to maintain compatibility across all auth routes
+export const createToken = signToken;
+
+export function verifyToken(token: string): AuthPayload | null {
+  try {
+    return jwt.verify(token, JWT_SECRET) as AuthPayload;
+  } catch {
+    return null;
+  }
 }
 
-export async function getCurrentUser(): Promise<SessionUser | null> {
+export async function getCurrentUser(): Promise<AuthPayload | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
     if (!token) return null;
-
-    const decoded = jwt.verify(token, JWT_SECRET) as SessionUser;
-    return decoded;
+    return verifyToken(token);
   } catch {
     return null;
   }
