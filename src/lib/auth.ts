@@ -9,13 +9,19 @@ export interface AuthPayload {
   role?: string;
 }
 
+/**
+ * Creates and signs a JSON Web Token for the user payload.
+ */
 export function signToken(payload: AuthPayload): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
 }
 
-// Alias to maintain compatibility across all auth routes
+// Alias export to guarantee compatibility with any routes importing createToken
 export const createToken = signToken;
 
+/**
+ * Verifies the JWT and returns the decoded AuthPayload, or null if invalid.
+ */
 export function verifyToken(token: string): AuthPayload | null {
   try {
     return jwt.verify(token, JWT_SECRET) as AuthPayload;
@@ -24,6 +30,9 @@ export function verifyToken(token: string): AuthPayload | null {
   }
 }
 
+/**
+ * Reads the token cookie directly from the Next.js request context and verifies it.
+ */
 export async function getCurrentUser(): Promise<AuthPayload | null> {
   try {
     const cookieStore = await cookies();
